@@ -10,6 +10,10 @@
 - Banned defaults: centered title on gradient, everything fading in,
   corner labels and frame borders, glow on UI chrome, generic particle bursts.
 - One display face, one UI face. One accent color unless the brief says otherwise.
+- Studio palette (default in lib/stage.js): Twilight Zone #191B15 x Stadium Grass #D3F425, a two-color
+  system. Ground Twilight, type and lines Grass and its OKLCH shades, dividers tints of Twilight.
+  Emphasis is inversion (Grass fill, Twilight type). A brief with its own brand passes `palette` to film().
+- Instagram Reels: keep every read inside x 90..920, y 250..1500 (the app's UI covers the rest).
 - Every 2 to 4 seconds something new must happen on screen.
 - Reading time: any text meant to be read holds still for at least
   max(1.2 s, 0.3 s per word + 0.5 s) before it moves or leaves. Per shot at most one
@@ -32,12 +36,18 @@
 4. Only then do the full render.
 
 ## Layout and tools
+- Every film gets its own colours and style from the brief: `npm run new -- <name> --combo <hexA-hexB | combo link>
+  [--invert] --style tech|grotesk|editorial|terminal`, in code `film({ combo, invert, style })`.
+  `comboPalette()` derives all shades in OKLCH; use `DISPLAY()`, `SANS`, `MONO` so the style applies.
+- `npm run new -- <name> [--9x16] [--seconds N] [--bpm N]` creates a film from a template;
+  `npm run build -- <name> [render flags]` runs score -> analyze -> beats -> render.
 - One folder per film: `films/<name>/`
   - `index.html` sets `window.FILM = { width, height, fps, duration }` and `window.seek(t)`.
     `?render=1` in the URL means render mode.
   - `audio.wav` (optional) is the score, synthesized by a script in the same folder.
   - `beats.json` is written by `.venv/bin/python beats.py films/<name>`.
-- `node render.mjs films/<name> --sheet` writes `sheet.png` (one frame per beat).
+- `node render.mjs films/<name> --sheet` writes `sheet-NN.png` (one frame per beat; a half-second grid
+  without beats.json). `--at` writes `strip-NN.png`, so it never replaces the beat sheet.
 - `node render.mjs films/<name>` writes `out.mp4`: H.264 yuv420p CRF 16, audio two-pass
   loudnorm to -14 LUFS. Contract violations (Math.random, rAF, setTimeout) are counted
   and make the render fail.

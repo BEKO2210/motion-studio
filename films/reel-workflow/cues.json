@@ -1,0 +1,154 @@
+{
+ "bpm": 120,
+ "note": "All times in beats (0.5 s). Shared by film.js (picture) and score.py (sound). '\n' in a command is a soft wrap: drawn as a new indented line, no key sound.",
+ "scenes": {
+  "hook": 0,
+  "claim": 10,
+  "s1": 16,
+  "s2": 30,
+  "s3": 46,
+  "s4": 58,
+  "s5": 74,
+  "result": 92,
+  "cta": 104,
+  "end": 120
+ },
+ "typing": [
+  {
+   "id": "brew",
+   "at": 17.5,
+   "cps": 24,
+   "text": "$ brew install node ffmpeg python"
+  },
+  {
+   "id": "apt",
+   "at": 21.5,
+   "cps": 26,
+   "text": "$ sudo apt install nodejs \nnpm ffmpeg python3"
+  },
+  {
+   "id": "clone",
+   "at": 31,
+   "cps": 34,
+   "text": "$ git clone \nhttps://github.com/BEKO2210/motion-studio"
+  },
+  {
+   "id": "cd",
+   "at": 34.5,
+   "cps": 34,
+   "text": "$ cd motion-studio"
+  },
+  {
+   "id": "npm",
+   "at": 36,
+   "cps": 34,
+   "text": "$ npm install"
+  },
+  {
+   "id": "pw",
+   "at": 37.25,
+   "cps": 34,
+   "text": "$ npx playwright install chromium"
+  },
+  {
+   "id": "venv",
+   "at": 39.75,
+   "cps": 34,
+   "text": "$ python3 -m venv .venv"
+  },
+  {
+   "id": "pip",
+   "at": 41.5,
+   "cps": 34,
+   "text": "$ .venv/bin/pip install \n-r requirements.txt"
+  },
+  {
+   "id": "claude",
+   "at": 47,
+   "cps": 24,
+   "text": "$ claude --model claude-opus-5-5"
+  },
+  {
+   "id": "model",
+   "at": 50.5,
+   "cps": 16,
+   "text": "> /effort"
+  },
+  {
+   "id": "brief",
+   "at": 59,
+   "cps": 34,
+   "text": "Erstelle einen 20-Sekunden-Film \nim Format 9:16 über mein Projekt. \nEin Akzent: Grün."
+  },
+  {
+   "id": "sheet",
+   "at": 75,
+   "cps": 28,
+   "text": "$ npm run build -- \nmein-film --sheet"
+  },
+  {
+   "id": "render",
+   "at": 84,
+   "cps": 28,
+   "text": "$ npm run build -- mein-film"
+  },
+  {
+   "id": "url",
+   "at": 105,
+   "cps": 20,
+   "text": "github.com/BEKO2210/motion-studio"
+  }
+ ],
+ "events": {
+  "hookWords": [
+   0,
+   1,
+   2
+  ],
+  "hookCode": 3,
+  "hookRead": 4.5,
+  "claim": [
+   10,
+   12.5
+  ],
+  "titles": [
+   16,
+   30,
+   46,
+   58,
+   74
+  ],
+  "chips": [
+   25.5,
+   26,
+   26.5
+  ],
+  "select": [
+   52,
+   52.5,
+   53
+  ],
+  "confirm": 54,
+  "reads": 65,
+  "rules": [
+   66,
+   67,
+   68,
+   69
+  ],
+  "sheetIn": 79,
+  "scores": [
+   81,
+   81.5,
+   82
+  ],
+  "progress": [
+   86,
+   90
+  ],
+  "done": 90,
+  "result": 92,
+  "cta": 104,
+  "ctaUrlDone": 108.5
+ }
+}

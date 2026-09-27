@@ -1,16 +1,25 @@
 {
   "name": "motion-studio",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Motion-Design-Filme mit Claude Code: Bild, Schrift und Ton komplett aus Code",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "new": "node new.mjs",
+    "build": "node build.mjs",
+    "example": "node build.mjs example"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "keywords": [
+    "motion-design",
+    "claude-code",
+    "canvas",
+    "video",
+    "ffmpeg",
+    "playwright"
+  ],
+  "author": "Belkis Aslani",
+  "license": "MIT",
+  "type": "module",
   "devDependencies": {
     "playwright": "^1.63.0"
-  }
+  },
+  "private": true
 }

@@ -1,0 +1,46 @@
+name: render
+
+# Proves the studio works on a clean machine: synthesize the example's sound, measure it,
+# render a contact sheet and the finished film, and keep both as artifacts.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+      - name: Contact sheet
+        run: npm run build -- example --sheet
+      - name: Render
+        run: node render.mjs films/example
+      - name: Check the delivery
+        run: |
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate -of csv=p=0 films/example/out.mp4
+          ffmpeg -hide_banner -i films/example/out.mp4 -af ebur128=peak=true -f null - 2>&1 | grep -E "I:|Peak:" | tail -2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: example
+          path: |
+            films/example/out.mp4
+            films/example/sheet-01.png

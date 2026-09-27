@@ -1,10 +1,12 @@
 // node render.mjs films/<name>                 full render -> out.mp4 (add --lufs -18 for a quieter sound bed)
 // node render.mjs films/<name> --sheet         one frame per beat -> sheet-NN.png
-// node render.mjs films/<name> --at 1.5,3:4:0.25   frames at given times (a:b:step ranges) -> sheet-NN.png
+// node render.mjs films/<name> --at 1.5,3:4:0.25   frames at given times (a:b:step ranges) -> strip-NN.png
+// node render.mjs films/<name> --gif 960      also write out.gif (looping, for READMEs)
+// node render.mjs films/<name> --at 2,5 --png  full-size stills frame-<t>.png (thumbnails, covers)
 import { chromium } from 'playwright';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, statSync, unlinkSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, unlinkSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve, join, relative, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -57,8 +59,12 @@ const range = s => s.split(',').flatMap(p => {
   const n = Math.floor((b - a) / step + 1e-9);
   return Array.from({ length: n + 1 }, (_, i) => +(a + i * step).toFixed(4));
 });
-const times = sheet
+// one frame per measured beat; without beats.json (no music yet) fall back to a half-second grid
+const beatTimes = () => existsSync(join(dir, 'beats.json'))
   ? JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')).beats
+  : Array.from({ length: Math.floor(film.duration * 2) }, (_, i) => i / 2 + 0.1);
+const times = sheet
+  ? beatTimes()
   : at !== null ? range(at)
   : Array.from({ length: Math.round(film.duration * film.fps) }, (_, i) => i / film.fps);
 
@@ -79,21 +85,31 @@ if (stills) {
   }
   const v = await violations();
   if (v.length) fail(v);
-  for (const f of readdirSync(dir)) if (/^sheet-\d+\.png$/.test(f)) unlinkSync(join(dir, f));
+  if (process.argv.includes('--png')) {
+    // single full-size stills instead of a sheet: frame-<seconds>.png
+    for (const s of shots) writeFileSync(join(dir, `frame-${s.t.toFixed(2)}.png`), Buffer.from(s.png, 'base64'));
+    await browser.close(); server.close();
+    console.log(`${shots.length} still(s) -> ${dir}/frame-*.png`);
+    process.exit(0);
+  }
+  // --sheet writes sheet-NN.png, --at writes strip-NN.png, so a strip never deletes the beat sheet
+  const prefix = sheet ? 'sheet' : 'strip';
+  for (const f of readdirSync(dir)) if (new RegExp(`^${prefix}-\\d+\\.png$`).test(f)) unlinkSync(join(dir, f));
   const portrait = film.height > film.width;
+  const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor); // sheets wear the film's ground
   const per = portrait ? 8 : 24;
-  const sp = await browser.newPage({ viewport: { width: 4 * 412 + 5 * 8, height: 400 } });
+  const sp = await browser.newPage({ viewport: { width: 4 * 412 + 5 * 12, height: 400 } });
   for (let p = 0; p * per < shots.length; p++) {
     const cells = shots.slice(p * per, p * per + per).map(s =>
       `<figure><img src="data:image/png;base64,${s.png}"><figcaption>${s.t.toFixed(2)}s</figcaption></figure>`).join('');
-    await sp.setContent(`<style>body{margin:0;background:#555;display:grid;grid-template-columns:repeat(4,412px);gap:8px;padding:8px}
-      figure{margin:0}img{width:412px;display:block}figcaption{font:12px monospace;color:#fff;padding:2px 0}</style>${cells}`);
+    await sp.setContent(`<style>body{margin:0;background:${bg};display:grid;grid-template-columns:repeat(4,412px);gap:12px;padding:12px}
+      figure{margin:0}img{width:412px;display:block;outline:1px solid rgba(255,255,255,.14)}figcaption{font:13px monospace;color:rgba(255,255,255,.55);padding:4px 0 0}</style>${cells}`);
     await sp.waitForFunction(() => [...document.images].every(i => i.complete));
-    await sp.screenshot({ path: join(dir, `sheet-${String(p + 1).padStart(2, '0')}.png`), fullPage: true });
+    await sp.screenshot({ path: join(dir, `${prefix}-${String(p + 1).padStart(2, '0')}.png`), fullPage: true });
   }
   await browser.close();
   server.close();
-  console.log(`${shots.length} frames in ${((Date.now() - t0) / 1000).toFixed(1)}s -> ${Math.ceil(shots.length / per)} sheet page(s)`);
+  console.log(`${shots.length} frames in ${((Date.now() - t0) / 1000).toFixed(1)}s -> ${prefix}-01..${String(Math.ceil(shots.length / per)).padStart(2, '0')}.png`);
   process.exit(0);
 }
 
@@ -141,3 +157,11 @@ server.close();
 console.log(`\r${times.length}/${times.length} frames in ${((Date.now() - t0) / 1000).toFixed(1)}s -> ${out}`);
 if (v.length) fail(v);
 if (hasAudio) { const e = ebur(out); console.log(`Loudness: ${e.I} LUFS | true peak: ${e.TP} dBFS`); }
+if (flag('--gif') !== null) {
+  // README-ready loop: two-pass palette, width from the flag (default: film width), every frame kept
+  const gw = +flag('--gif') || film.width, gif = join(dir, 'out.gif');
+  const vf = `scale=${gw}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=full[p];[b][p]paletteuse=dither=sierra2_4a`;
+  const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', out, '-vf', vf, '-loop', '0', gif]);
+  if (r.status) { console.error(r.stderr.toString()); process.exit(1); }
+  console.log(`${gif}: ${(statSync(gif).size / 1e6).toFixed(2)} MB`);
+}

@@ -187,6 +187,80 @@ def whoosh(length=0.5, seed=0):
     return bp(noise(len(t), seed), 600, 6000) * env * 0.5
 
 
+def keypress(seed=0, kind="key"):
+    """Mechanical keyboard switch: stem click, bottom-out thock with case resonance, then the
+    softer key-up. kind: "key", "space" (longer, deeper), "enter" (firmer)."""
+    r = np.random.default_rng(seed)
+    t = secs(0.16)
+    pitch = r.uniform(0.92, 1.08) * {"key": 1.0, "space": 0.72, "enter": 0.85}[kind]
+    level = r.uniform(0.8, 1.0) * {"key": 1.0, "space": 1.15, "enter": 1.25}[kind]
+    out = np.zeros_like(t)
+    # stem click: tight bright transient
+    out += bp(noise(len(t), seed), 2500 * pitch, 9000) * np.exp(-t / 0.0012) * 0.9
+    # bottom-out 4-7 ms later: thock body plus a short plate ring
+    d = int(r.uniform(0.004, 0.007) * SR)
+    tt = t[: len(t) - d]
+    thock = (np.sin(2 * np.pi * 210 * pitch * tt) * np.exp(-tt / 0.018) * 0.9
+             + np.sin(2 * np.pi * 1150 * pitch * tt) * np.exp(-tt / 0.006) * 0.35
+             + bp(noise(len(tt), seed + 1), 400, 3000) * np.exp(-tt / 0.004) * 0.6)
+    out[d:] += thock
+    # key-up 60-90 ms later, quieter and higher
+    u = int(r.uniform(0.06, 0.09) * SR)
+    tu = t[: len(t) - u]
+    out[u:] += (bp(noise(len(tu), seed + 2), 3000, 8000) * np.exp(-tu / 0.001) * 0.35
+                + np.sin(2 * np.pi * 320 * pitch * tu) * np.exp(-tu / 0.01) * 0.2)
+    return out * level * 0.5
+
+
+def pop(freq=880, seed=0, length=0.12):
+    """UI pop: a short upward pitch blip with a soft body; tuned, so pops can play a scale."""
+    t = secs(length)
+    f = freq * (0.7 + 0.3 * (1 - np.exp(-t / 0.012)))
+    body = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / (length / 4))
+    return (body + 0.35 * np.sin(4 * np.pi * np.cumsum(f) / SR) * np.exp(-t / (length / 8))
+            + hp(noise(len(t), seed), 5000) * np.exp(-t / 0.0015) * 0.3) * 0.6
+
+
+def bell(freq=1318.5, length=2.0, seed=0):
+    """Small bell: inharmonic partials (1, 2.76, 5.40, 8.93), each decaying on its own."""
+    t = secs(length)
+    out = np.zeros_like(t)
+    for k, (ratio, amp, tau) in enumerate(((1, 1, 0.9), (2.76, 0.45, 0.45), (5.40, 0.25, 0.22), (8.93, 0.12, 0.12))):
+        if freq * ratio > 9000:
+            continue                                          # keep it sweet, not shrill
+        out += amp * np.sin(2 * np.pi * freq * ratio * t + k) * np.exp(-t / (tau * length / 2))
+    return out * np.minimum(1, t / 0.002) * 0.35
+
+
+def swipe(length=0.45, seed=0, left_to_right=True, lo=350, hi=7000):
+    """Stereo swipe: a bank of 12 steep noise bands whose envelopes peak one after another,
+    low to high, while the image travels across the field. Clean, no hiss above `hi`. (n, 2)."""
+    t = secs(length)
+    p = t / length
+    edges = np.geomspace(lo, hi, 13)
+    y = np.zeros_like(t)
+    for k in range(12):
+        band = bp(noise(len(t), seed * 31 + k), edges[k], edges[k + 1], order=4)
+        c = (k + 0.5) / 12                                  # when this band peaks
+        env = np.exp(-((p - c * 0.8 - 0.1) / 0.16) ** 2)
+        y += band * env * (1.0 - 0.35 * c)
+    y *= np.sin(np.pi * p) ** 0.8 * 2.2
+    pan = 0.15 + 0.7 * (p if left_to_right else 1 - p)
+    return np.stack([y * np.cos(pan * np.pi / 2), y * np.sin(pan * np.pi / 2)], 1)
+
+
+def shutter(seed=0):
+    """Mechanical shutter: two metal clicks 40 ms apart with a short spring rattle."""
+    t = secs(0.12)
+    out = np.zeros_like(t)
+    for off, g in ((0, 1.0), (0.04, 0.7)):
+        k = int(off * SR)
+        tt = t[: len(t) - k]
+        out[k:] += g * (bp(noise(len(tt), seed + k), 2000, 9000) * np.exp(-tt / 0.002)
+                        + np.sin(2 * np.pi * 2900 * tt) * np.exp(-tt / 0.004) * 0.4)
+    return out * 0.6
+
+
 def reverse(x):
     return x[::-1].copy()
 
@@ -275,10 +349,11 @@ class Mix:
         sig = sig[: self.n - s]
         ramp = min(len(sig), int(0.0007 * SR))  # no vertical onsets: they overshoot after AAC
         sig = sig.copy()
-        sig[:ramp] *= np.linspace(0, 1, ramp, endpoint=False)
+        sig[:ramp] *= np.linspace(0, 1, ramp, endpoint=False)[:, None] if sig.ndim == 2 else np.linspace(0, 1, ramp, endpoint=False)
         gl, gr = np.cos((pan + 1) * np.pi / 4) * np.sqrt(2), np.sin((pan + 1) * np.pi / 4) * np.sqrt(2)
-        self.bus[bus][0][s:s + len(sig)] += sig * gain * gl
-        self.bus[bus][1][s:s + len(sig)] += sig * gain * gr
+        left, right = (sig[:, 0], sig[:, 1]) if sig.ndim == 2 else (sig, sig)  # stereo sources keep their own image
+        self.bus[bus][0][s:s + len(sig)] += left * gain * gl
+        self.bus[bus][1][s:s + len(sig)] += right * gain * gr
 
     def note(self, time, m, vel, dur, pedal=False, gain=1.0):
         self.add("piano", time, piano(m, vel, dur, pedal), gain, piano_pan(m))

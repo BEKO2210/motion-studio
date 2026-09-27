@@ -13,4 +13,4 @@ function draw(ctx, t, d) {
   if (q > 0) text(ctx, 'every frame is a function of time', 120, 560, { size: 48, weight: 400, color: q > 0.5 ? C.signal : C.fg3 });
 }
 
-film({ width: W, height: H, fps: 60, duration: 4, blur: 6, draw });
+film({ width: W, height: H, fps: 60, duration: 4, blur: 6, draw, palette: 'studio' });
