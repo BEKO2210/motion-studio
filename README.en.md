@@ -17,8 +17,8 @@ Every image on this page was rendered with this repo.
 
 ## Made with motion-studio
 
-The Instagram reel that explains this repo – built entirely with this repo: picture, type and every key
-press in the sound. [▶ Watch the whole reel](https://github.com/BEKO2210/motion-studio/raw/main/docs/media/reel.mp4) (60 s, 9:16, sound design only).
+The Instagram reel that explains this repo – built entirely with this repo: picture, type, music (sampled
+grand, pad, bass, drums) and every key press in the sound. [▶ Watch the whole reel](https://github.com/BEKO2210/motion-studio/raw/main/docs/media/reel.mp4) (60 s, 9:16).
 
 <table>
   <tr>
@@ -210,6 +210,7 @@ nothing is cropped.
 | `lib/stage.js` | canvas runtime, `comboPalette`, styles |
 | `lib/logo.js` · `films/brand` | the logo – rendered by the studio too (`brand/logo/`) |
 | `lib/audio.py` · `lib/analyze.py` | sound synthesis and mix · spectrum per frame |
+| `lib/instruments.py` · `lib/aesthetics.py` | sampled grand, pad, bass, drums · the "ear": scores a mix |
 | `beats.py` | measures the beat grid |
 | `skill/motion-studio` | the `/motion-studio` skill for Claude Code |
 | `films/example` | the smallest runnable film |
@@ -218,5 +219,5 @@ nothing is cropped.
 ## License
 
 Colors: [Twilight Zone × Stadium Grass](https://combo.it-handwerk-stuttgart.de/#191B15-D3F425) – `#191B15` and `#D3F425`, a two-color system: Twilight ground, Grass type and lines in its own shades, emphasis by inversion.
-Code: [MIT](LICENSE). Fonts: Sora, IBM Plex Mono, Space Grotesk, JetBrains Mono, Instrument Serif – SIL Open Font License 1.1 (`brand/fonts/licenses`).
+Code: [MIT](LICENSE). Piano: [Salamander Grand Piano V3](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) by Alexander Holm, CC-BY 3.0 (`tools/fetch-samples.sh`). Fonts: Sora, IBM Plex Mono, Space Grotesk, JetBrains Mono, Instrument Serif – SIL Open Font License 1.1 (`brand/fonts/licenses`).
 Built by [Belkis Aslani](https://github.com/BEKO2210) with Claude Code.

@@ -25,7 +25,11 @@
   lines gets a background-colored halo (text(..., { halo })) so lines visibly stop before it.
 
 ## Sound
-- Score and SFX are synthesized in code unless a track is supplied.
+- Score and SFX are made in code unless a track is supplied: synthesized (lib/audio.py) or played from
+  sampled instruments (lib/instruments.py: Salamander grand, CC-BY 3.0 – credit it; tools/fetch-samples.sh).
+- Premium check, because the ear is missing: score every mix with `.venv/bin/python lib/aesthetics.py
+  audio.wav` (Audiobox Aesthetics). Library music scores about CE 7.5, PQ 7.8 – stay at or above that,
+  A/B mix knobs and keep what scores higher. Then read a spectrogram: no noise walls, no shrill partials.
 - Place hits on the measured beat grid (beats.json). Loudness -14 LUFS.
 
 ## Loop before you show me anything

@@ -1,0 +1,3 @@
+# Optional: the "ear" in the loop – lib/aesthetics.py scores a mix (Meta Audiobox Aesthetics, CC-BY 4.0).
+# Pulls PyTorch (~2 GB), so it is kept out of requirements.txt.
+audiobox_aesthetics

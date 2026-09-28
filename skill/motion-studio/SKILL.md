@@ -92,8 +92,14 @@ quiet clock tick from the template (lower it if needed) so the beat grid can be 
 cd <abs> && npm run build -- <name> --sheet      # score -> analyze -> beats -> contact sheet, one command
 ```
 
-You cannot hear. Check sound with numbers: loudness and true peak (printed at render), measured beats
-within one frame of the plan, and a spectrogram – no hiss walls, no shrill partials, hits where planned:
+For music, use the sampled grand (`from instruments import grand, pad, sub, kick, clap, hat, crash`;
+run `tools/fetch-samples.sh` once) and duck pad and bass under the kick (`mx.duck`). Ask `mx.render(...,
+stems={"music": [...], "sfx": ["sfx"]})` for separate stems.
+
+You cannot hear. Check sound with numbers: `.venv/bin/python lib/aesthetics.py films/<name>/audio.wav`
+(needs `pip install -r requirements-quality.txt`; aim for CE ≥ 7.5 and PQ ≥ 8.0, A/B mix knobs and keep
+the winner), loudness and true peak (printed at render), measured beats within one frame of the plan,
+and a spectrogram – no noise walls, no shrill partials, hits where planned:
 
 ```bash
 cd <abs> && ffmpeg -y -loglevel error -i films/<name>/audio.wav -lavfi showspectrumpic=s=1400x500:legend=1 films/<name>/spec.png

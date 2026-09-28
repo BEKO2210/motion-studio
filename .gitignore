@@ -19,6 +19,7 @@ films/**/strip-*.png
 films/**/spec.png
 films/**/render.log
 films/**/audio.wav
+films/**/audio-*.wav
 films/**/wave.json
 films/**/beats.json
 films/**/cues.json

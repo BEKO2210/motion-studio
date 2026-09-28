@@ -334,10 +334,24 @@ def aac_true_peak(path):
 
 
 class Mix:
+    # reverb send per bus; a bus is created the first time something is added to it
+    SENDS = {"piano": 0.34, "fx": 0.16, "dry": 0.0, "pad": 0.3, "bass": 0.0, "drums": 0.06, "perc": 0.12, "sfx": 0.14}
+
     def __init__(self, duration):
         self.n = int(round(duration * SR))
-        self.bus = {k: [np.zeros(self.n), np.zeros(self.n)] for k in ("piano", "fx", "dry")}
-        self.send = {"piano": 0.34, "fx": 0.16, "dry": 0.0}
+        self.bus = {}
+        self.send = dict(self.SENDS)
+        self.ducks = []
+
+    def _bus(self, name):
+        if name not in self.bus:
+            self.bus[name] = [np.zeros(self.n), np.zeros(self.n)]
+            self.send.setdefault(name, 0.12)
+        return self.bus[name]
+
+    def duck(self, buses, times, depth_db=6.0, release=0.16):
+        """Sidechain: pull the given buses down at every time in `times` (e.g. each kick), recover over `release`."""
+        self.ducks.append((tuple(buses), list(times), depth_db, release))
 
     def add(self, bus, time, sig, gain=1.0, pan=0.0):
         s = int(round(time * SR))
@@ -352,8 +366,9 @@ class Mix:
         sig[:ramp] *= np.linspace(0, 1, ramp, endpoint=False)[:, None] if sig.ndim == 2 else np.linspace(0, 1, ramp, endpoint=False)
         gl, gr = np.cos((pan + 1) * np.pi / 4) * np.sqrt(2), np.sin((pan + 1) * np.pi / 4) * np.sqrt(2)
         left, right = (sig[:, 0], sig[:, 1]) if sig.ndim == 2 else (sig, sig)  # stereo sources keep their own image
-        self.bus[bus][0][s:s + len(sig)] += left * gain * gl
-        self.bus[bus][1][s:s + len(sig)] += right * gain * gr
+        b = self._bus(bus)
+        b[0][s:s + len(sig)] += left * gain * gl
+        b[1][s:s + len(sig)] += right * gain * gr
 
     def note(self, time, m, vel, dur, pedal=False, gain=1.0):
         self.add("piano", time, piano(m, vel, dur, pedal), gain, piano_pan(m))
@@ -362,18 +377,40 @@ class Mix:
         """Hard silence on the master between a and b (reverb tails included), 6 ms fades."""
         self.mute = getattr(self, "mute", []) + [(a, b, fade)]
 
-    def render(self, path, target=-14.0):
+    def _ducked(self):
+        t = np.arange(self.n) / SR
+        for buses, times, depth, rel in self.ducks:
+            g = np.ones(self.n)
+            floor = 10 ** (-depth / 20)
+            for tk in times:
+                s = int(tk * SR)
+                if s >= self.n:
+                    continue
+                e = min(self.n, s + int(rel * 6 * SR))
+                tt = t[s:e] - tk
+                g[s:e] = np.minimum(g[s:e], 1 - (1 - floor) * np.exp(-tt / rel))
+            for name in buses:
+                if name in self.bus:
+                    self.bus[name] = [ch * g for ch in self.bus[name]]
+
+    def render(self, path, target=-14.0, stems=None):
+        """Mix, normalize to `target` LUFS with an AAC-aware limiter, write `path`. stems: {"music": [bus...],
+        "sfx": [bus...]} also writes <path>-music.wav etc. at the same gain, so the stems add up to the mix."""
+        self._ducked()
         ir = reverb_ir()
         out = [np.zeros(self.n), np.zeros(self.n)]
+        per_bus = {}
         for k, (l, r) in self.bus.items():
             if k == "piano":
                 l, r = lp(l, 11000), lp(r, 11000)
-            out[0] += l
-            out[1] += r
+            bl, br = l.copy(), r.copy()
             if self.send[k]:
                 wet = [fftconvolve(hp(ch, 180), ir[i])[: self.n] for i, ch in enumerate((l, r))]
-                out[0] += wet[0] * self.send[k]
-                out[1] += wet[1] * self.send[k]
+                bl += wet[0] * self.send[k]
+                br += wet[1] * self.send[k]
+            per_bus[k] = (bl, br)
+            out[0] += bl
+            out[1] += br
         out = [lp(hp(ch, 24), 18000) for ch in out]
         # a full-scale hit on sample 0 overshoots in the AAC encoder's first frame: 30 ms lead-in
         lead = int(0.030 * SR)
@@ -398,6 +435,11 @@ class Mix:
                 break
             ceiling -= tp + 1.2 + 0.15
         print(f"ceiling {ceiling:.2f} dBFS, true peak after AAC {tp:.1f} dBTP")
+        for name, buses in (stems or {}).items():
+            st = [sum(per_bus[b][i] for b in buses if b in per_bus) + np.zeros(self.n) for i in range(2)]
+            st = [lp(hp(ch, 24), 18000) * g for ch in st]
+            st = limit(st, ceiling)
+            sf.write(str(path).replace(".wav", f"-{name}.wav"), np.stack(st, 1).astype(np.float32), SR, subtype="PCM_24")
         return lufs(final)
 
 

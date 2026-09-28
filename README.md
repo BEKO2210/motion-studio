@@ -17,8 +17,8 @@ Alle Bilder auf dieser Seite sind mit diesem Repo gerendert.
 
 ## Gebaut mit motion-studio
 
-Das Instagram-Reel, das dieses Repo erklärt – komplett mit diesem Repo gebaut: Bild, Schrift, jeder
-Tastenanschlag im Ton. [▶ Ganzes Reel ansehen](https://github.com/BEKO2210/motion-studio/raw/main/docs/media/reel.mp4) (60 s, 9:16, nur Soundeffekte).
+Das Instagram-Reel, das dieses Repo erklärt – komplett mit diesem Repo gebaut: Bild, Schrift, Musik
+(gesampelter Flügel, Pad, Bass, Drums) und jeder Tastenanschlag im Ton. [▶ Ganzes Reel ansehen](https://github.com/BEKO2210/motion-studio/raw/main/docs/media/reel.mp4) (60 s, 9:16).
 
 <table>
   <tr>
@@ -211,6 +211,7 @@ wird eingepasst, nichts wird beschnitten.
 | `lib/stage.js` | Canvas-Laufzeit, `comboPalette`, Stile |
 | `lib/logo.js` · `films/brand` | das Logo – ebenfalls mit dem Studio gerendert (`brand/logo/`) |
 | `lib/audio.py` · `lib/analyze.py` | Klang-Synthese und Mix · Spektrum pro Frame |
+| `lib/instruments.py` · `lib/aesthetics.py` | gesampelter Flügel, Pad, Bass, Drums · das „Ohr“: bewertet einen Mix |
 | `beats.py` | misst das Taktraster |
 | `skill/motion-studio` | der Skill `/motion-studio` für Claude Code |
 | `films/example` | kleinster lauffähiger Film |
@@ -219,5 +220,5 @@ wird eingepasst, nichts wird beschnitten.
 ## Lizenz
 
 Farben: [Twilight Zone × Stadium Grass](https://combo.it-handwerk-stuttgart.de/#191B15-D3F425) – `#191B15` und `#D3F425`, ein Zwei-Farben-System: Grund Twilight, Schrift und Linien Grass in eigenen Abstufungen, Hervorhebung als Umkehrung.
-Code: [MIT](LICENSE). Schriften: Sora, IBM Plex Mono, Space Grotesk, JetBrains Mono, Instrument Serif – SIL Open Font License 1.1 (`brand/fonts/licenses`).
+Code: [MIT](LICENSE). Flügel: [Salamander Grand Piano V3](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) von Alexander Holm, CC-BY 3.0 (`tools/fetch-samples.sh`). Schriften: Sora, IBM Plex Mono, Space Grotesk, JetBrains Mono, Instrument Serif – SIL Open Font License 1.1 (`brand/fonts/licenses`).
 Gebaut von [Belkis Aslani](https://github.com/BEKO2210) mit Claude Code.
