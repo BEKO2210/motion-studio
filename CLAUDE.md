@@ -49,7 +49,8 @@
   - `index.html` sets `window.FILM = { width, height, fps, duration }` and `window.seek(t)`.
     `?render=1` in the URL means render mode.
   - `audio.wav` (optional) is the score, synthesized by a script in the same folder.
-  - `beats.json` is written by `.venv/bin/python beats.py films/<name>`.
+  - `beats.json` is written by `.venv/bin/python beats.py films/<name>`: measured on the music stem
+    (`audio-music.wav`) when the score writes one, seeded with the bpm from cues.json.
 - `node render.mjs films/<name> --sheet` writes `sheet-NN.png` (one frame per beat; a half-second grid
   without beats.json). `--at` writes `strip-NN.png`, so it never replaces the beat sheet.
 - `node render.mjs films/<name>` writes `out.mp4`: H.264 yuv420p CRF 16, audio two-pass
@@ -59,6 +60,7 @@
   loads `../<name>/film.js` and symlinks audio.wav, wave.json, beats.json, cues.json. The film code
   branches on `V` for layout only; timing and sound stay identical. Re-layout, never crop.
 - `node render.mjs films/<name> --remux` replaces only the sound of an existing out.mp4.
+- `node render.mjs films/<name> --jobs 4` paints and captures in 4 browsers in parallel (busy, grainy scenes).
 - Audio: `Mix.render` normalizes to -14 LUFS and limits until the AAC encode stays under -1.2 dBTP.
 - mulberry32:
   ```js

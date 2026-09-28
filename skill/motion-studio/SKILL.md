@@ -127,7 +127,8 @@ cd <abs> && node render.mjs films/<name> [--lufs -18]        # and films/<name>-
 cd <abs> && ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,duration -of csv=p=0 films/<name>/out.mp4
 ```
 
-Loudness on target ±0.2 LU, true peak ≤ -1.2 dBTP. Optional: `--gif 960` for a loop, `--at 2.5 --png`
+Busy or grainy scenes capture slowly: add `--jobs 4`. Loudness on target ±0.2 LU, true peak ≤ -1.2 dBTP.
+Optional: `--gif 960` for a loop, `--at 2.5 --png`
 for a thumbnail.
 
 ## 7. Deliver

@@ -189,6 +189,7 @@ nothing is cropped.
 | `node render.mjs films/x --at 2,5 --png` | full-size stills, e.g. for thumbnails |
 | `node render.mjs films/x --lufs -18` | quieter, e.g. as an effects bed under your own music |
 | `node render.mjs films/x --remux` | replace only the sound of a finished video |
+| `node render.mjs films/x --jobs 4` | four browsers render in parallel (busy scenes, paper grain) |
 
 ## Pitfalls already solved
 

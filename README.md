@@ -190,6 +190,7 @@ wird eingepasst, nichts wird beschnitten.
 | `node render.mjs films/x --at 2,5 --png` | Einzelbilder in voller Größe, z. B. für Thumbnails |
 | `node render.mjs films/x --lufs -18` | leiser, z. B. als Effekt-Spur unter eigener Musik |
 | `node render.mjs films/x --remux` | nur den Ton eines fertigen Videos ersetzen |
+| `node render.mjs films/x --jobs 4` | vier Browser rendern parallel (volle Szenen, Papierkorn) |
 
 ## Fallen, die schon gelöst sind
 

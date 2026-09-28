@@ -3,6 +3,7 @@
 // node render.mjs films/<name> --at 1.5,3:4:0.25   frames at given times (a:b:step ranges) -> strip-NN.png
 // node render.mjs films/<name> --gif 960      also write out.gif (looping, for READMEs)
 // node render.mjs films/<name> --at 2,5 --png  full-size stills frame-<t>.png (thumbnails, covers)
+// node render.mjs films/<name> --jobs 4       full render with 4 browsers in parallel (busy scenes)
 import { chromium } from 'playwright';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -33,7 +34,12 @@ const base = `http://127.0.0.1:${server.address().port}/`;
 // Render mode: kill CSS motion, count every contract violation.
 const guard = () => {
   window.__violations = [];
-  const flag = (name, fn) => function (...a) { window.__violations.push(name); return fn.apply(this, a); };
+  // count only calls from the film's own scripts (served over http): Playwright's waitForFunction
+  // polls with requestAnimationFrame from injected code, which is not the film's fault
+  const flag = (name, fn) => function (...a) {
+    if (/https?:\/\//.test(new Error().stack)) window.__violations.push(name);
+    return fn.apply(this, a);
+  };
   Math.random = flag('Math.random', Math.random);
   window.requestAnimationFrame = flag('requestAnimationFrame', window.requestAnimationFrame);
   window.setTimeout = flag('setTimeout', window.setTimeout);
@@ -48,7 +54,8 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 page.on('pageerror', e => { console.error('page error:', e.message); process.exit(1); });
 await page.addInitScript(guard);
-await page.goto(base + relative(root, join(dir, 'index.html')) + '?render=1');
+const url = base + relative(root, join(dir, 'index.html')) + '?render=1';
+await page.goto(url);
 await page.waitForFunction(() => window.FILM && typeof window.seek === 'function', null, { timeout: 60000 });
 const film = await page.evaluate(() => window.FILM);
 await page.setViewportSize({ width: film.width, height: film.height });
@@ -143,16 +150,31 @@ const args = ['-f', 'image2pipe', '-framerate', String(film.fps), '-i', '-', ...
   '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-movflags', '+faststart', '-shortest', out];
 const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', ...args], { stdio: ['pipe', 'inherit', 'inherit'] });
 const done = new Promise((ok, no) => ff.on('close', c => (c ? no(new Error(`ffmpeg exit ${c}`)) : ok())));
-for (const [i, t] of times.entries()) {
-  await page.evaluate(t => window.seek(t), t);
-  const png = await page.screenshot({ type: 'png' });
-  if (!ff.stdin.write(png)) await new Promise(r => ff.stdin.once('drain', r));
-  if (i % 60 === 0) process.stdout.write(`\r${i + 1}/${times.length} frames, ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+// --jobs N: N browsers paint and capture frames side by side (PNG capture of a busy frame is the slow part,
+// and pages of one browser share its capture pipeline, so each job gets its own browser);
+// frames still reach ffmpeg in order
+const pages = [page], extra = [];
+for (let k = 1; k < Math.max(1, +flag('--jobs') || 1); k++) {
+  const b = await chromium.launch();
+  extra.push(b);
+  const p = await b.newPage();
+  p.on('pageerror', e => { console.error('page error:', e.message); process.exit(1); });
+  await p.addInitScript(guard);
+  await p.goto(url);
+  await p.waitForFunction(() => window.FILM && typeof window.seek === 'function', null, { timeout: 60000 });
+  await p.setViewportSize({ width: film.width, height: film.height });
+  pages.push(p);
+}
+const shot = async (p, t) => { await p.evaluate(t => window.seek(t), t); return p.screenshot({ type: 'png' }); };
+for (let i = 0; i < times.length; i += pages.length) {
+  const pngs = await Promise.all(pages.map((p, k) => (i + k < times.length ? shot(p, times[i + k]) : null)));
+  for (const png of pngs) if (png && !ff.stdin.write(png)) await new Promise(r => ff.stdin.once('drain', r));
+  if (i % 60 < pages.length) process.stdout.write(`\r${i + 1}/${times.length} frames, ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 }
 ff.stdin.end();
 await done;
-const v = await violations();
-await browser.close();
+const v = (await Promise.all(pages.map(p => p.evaluate(() => window.__violations)))).flat();
+await Promise.all([browser, ...extra].map(b => b.close()));
 server.close();
 console.log(`\r${times.length}/${times.length} frames in ${((Date.now() - t0) / 1000).toFixed(1)}s -> ${out}`);
 if (v.length) fail(v);
